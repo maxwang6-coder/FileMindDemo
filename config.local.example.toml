@@ -1,0 +1,8 @@
+# Copy to config.local.toml on the server. Do not expose this file via the web.
+DATA_DIR = "data"
+# Uncomment and set an existing directory to authorize filesystem access.
+# ROOT_PATH = "/absolute/path/to/authorized/folder"
+CLOUD_ENABLED = false
+MODEL_PROVIDER = "mock"
+WRITE_ENABLED = false
+MAX_FILES = 500

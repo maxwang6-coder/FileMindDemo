@@ -1,0 +1,53 @@
+# Python 虚拟环境与生成的缓存
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# 环境变量与密钥；只允许提交不含真实值的模板
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# 本机配置、授权目录与用户路径；保留配置示例
+config.local.*
+!config.local.example.*
+paths.local.*
+.idea/
+.vscode/
+
+# 程序运行数据：数据库、索引、向量缓存、日志和锁
+/data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.log
+logs/
+audit_logs/
+operation_logs/
+vector_cache/
+embeddings_cache/
+.executor.lock
+
+# 私有资料请放入以下目录；可公开的人工样例可放在 eval/ 中
+/private/
+/real_data/
+/user_data/
+
+# macOS 与编辑器临时文件
+.DS_Store
+._*
+*.swp
+*.swo
+*~
