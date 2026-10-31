@@ -55,7 +55,9 @@ class LocalSessionMiddleware:
                     (b'cache-control', b'no-store'),
                     (b'referrer-policy', b'no-referrer'),
                     (b'x-content-type-options', b'nosniff'),
-                    (b'content-security-policy', b"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"),
+                    # Element Plus uses inline styles for component layout;
+                    # scripts still require same-origin, precompiled assets.
+                    (b'content-security-policy', b"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"),
                 ]
             await send(message)
 

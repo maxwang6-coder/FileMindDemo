@@ -11,6 +11,11 @@ __pycache__/
 .coverage.*
 htmlcov/
 
+# Node 工具、依赖和可重新构建的前端产物
+/.tools/
+/node_modules/
+/app/static/dist/
+
 # 环境变量与密钥；只允许提交不含真实值的模板
 .env
 .env.*

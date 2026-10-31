@@ -4,20 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FileMindDemo</title>
-  <script src="/static/session.js" defer></script>
+  <script type="module" src="/src/main.js"></script>
 </head>
 <body>
-  <h1>FileMindDemo</h1>
-  <p>文件操作模式：<strong id="write-mode">{{WRITE_MODE}}</strong></p>
-  <p>模型模式：<strong id="model-mode">{{MODEL_MODE}}</strong></p>
-  <p>Mock 使用模拟结果，不调用真实 AI。真实模型功能接入后由后端调用，密钥不会发送到网页。</p>
-  <p>从启动程序的本机终端复制会话 token。刷新页面后需重新输入。</p>
-  <form id="session-form" autocomplete="off">
-    <label for="token">会话 token</label>
-    <input id="token" type="password" autocomplete="off" spellcheck="false" required>
-    <button type="submit">连接</button>
-  </form>
-  <button id="disconnect" type="button" hidden>断开连接</button>
-  <p id="status" role="status">尚未连接</p>
+  <div id="app" data-write-mode="{{WRITE_MODE}}" data-model-mode="{{MODEL_MODE}}"></div>
+  <noscript>请启用 JavaScript 以使用 FileMindDemo。</noscript>
 </body>
 </html>

@@ -1,8 +1,14 @@
 import pytest
+import re
 from fastapi.testclient import TestClient
 
 from app import main
 from app.config import Settings
+
+
+def frontend_paths(client):
+    script = re.search(r'<script[^>]+src="([^"]+)"', client.get('/').text).group(1)
+    return ('/', '/health', script)
 
 
 @pytest.fixture
@@ -44,7 +50,7 @@ def test_public_pages_do_not_expose_secrets_or_paths(make_client, monkeypatch, t
     configuration = Settings(ROOT_PATH=tmp_path, DATA_DIR=tmp_path / 'private',
                              CLOUD_ENABLED=True, MODEL_PROVIDER=secret)
     with make_client(configuration) as client:
-        for path in ('/', '/health', '/static/session.js'):
+        for path in frontend_paths(client):
             response = client.get(path)
             assert secret not in response.text
             assert str(tmp_path) not in response.text
@@ -66,7 +72,7 @@ def test_get_requests_cannot_mutate_or_open_files(make_client, monkeypatch, tmp_
     with make_client(Settings(ROOT_PATH=root, DATA_DIR=tmp_path / 'data')) as client:
         data_before = {p.name: p.read_bytes() for p in (tmp_path / 'data').iterdir()}
         headers = {'Authorization': 'Bearer ' + tokens[0]}
-        for path in ('/', '/health', '/static/session.js', '/api/status'):
+        for path in (*frontend_paths(client), '/api/status'):
             assert client.get(path, headers=headers, params={
                 'path': str(document), 'action': 'delete', 'open': 'true',
             }).status_code == 200

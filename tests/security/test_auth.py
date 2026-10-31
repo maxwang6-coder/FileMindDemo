@@ -1,4 +1,5 @@
 import pytest
+import re
 from fastapi.testclient import TestClient
 
 from app import main
@@ -24,7 +25,7 @@ def test_api_requires_bearer_on_all_routes_and_methods(session):
     assert client.get('/api/status', headers={'Authorization': 'Bearer ' + token}).status_code == 200
 
 
-@pytest.mark.parametrize('origin', ['https://evil.example', 'null', 'http://127.0.0.1:8001', 'https://127.0.0.1:8000'])
+@pytest.mark.parametrize('origin', ['https://evil.example', 'null', 'http://127.0.0.1:8000', 'https://127.0.0.1:8765'])
 def test_foreign_origin_rejected_even_with_token(session, origin):
     client, token = session
     response = client.get('/api/status', headers={'Authorization': 'Bearer ' + token, 'Origin': origin})
@@ -32,7 +33,7 @@ def test_foreign_origin_rejected_even_with_token(session, origin):
     assert 'access-control-allow-origin' not in response.headers
 
 
-@pytest.mark.parametrize('host', ['evil.example:8000', '127.0.0.1.evil.example:8000', 'localhost:8000', '127.0.0.1:9000'])
+@pytest.mark.parametrize('host', ['evil.example:8765', '127.0.0.1.evil.example:8765', 'localhost:8765', '127.0.0.1:8000'])
 def test_invalid_host_rejected(session, host):
     client, token = session
     assert client.get('/api/status', headers={'Host': host, 'Authorization': 'Bearer ' + token}).status_code == 400
@@ -49,21 +50,24 @@ def test_expected_origin_and_missing_origin_allowed(session, origin):
 
 def test_duplicate_security_headers_rejected(session):
     client, token = session
-    for name, value, expected in [('Host', '127.0.0.1:8000', 400), ('Origin', main.ORIGIN, 403), ('Authorization', 'Bearer ' + token, 401)]:
+    for name, value, expected in [('Host', f'{main.HOST}:{main.PORT}', 400), ('Origin', main.ORIGIN, 403), ('Authorization', 'Bearer ' + token, 401)]:
         response = client.get('/api/status', headers=[(name, value), (name, value)])
         assert response.status_code == expected
 
 
 def test_public_assets_contain_no_token_and_are_not_cached(session):
     client, token = session
-    for path in ('/', '/static/session.js'):
+    script_path = re.search(r'<script[^>]+src="([^"]+)"', client.get('/').text).group(1)
+    assert script_path.startswith('/static/assets/')
+    for path in ('/', script_path):
         response = client.get(path)
         assert response.status_code == 200
         assert token not in response.text
         assert response.headers['cache-control'] == 'no-store'
         assert 'access-control-allow-origin' not in response.headers
-    script = client.get('/static/session.js').text
+    script = (main.STATIC_DIR / 'src' / 'App.vue').read_text()
     assert 'localStorage' not in script and 'sessionStorage' not in script
+    assert client.get('/static/src/App.vue').status_code == 404
 
 
 def test_restart_rotates_token(monkeypatch, tmp_path):
@@ -83,8 +87,30 @@ def test_launcher_binds_only_loopback(monkeypatch):
     monkeypatch.setattr(main.uvicorn, 'run', lambda app, **kwargs: captured.update(kwargs))
     main.main()
     assert captured['host'] == '127.0.0.1'
+    assert captured['port'] == 8765
     assert captured['proxy_headers'] is False
     assert captured['access_log'] is False
+
+
+def test_manual_uvicorn_entry(monkeypatch, tmp_path):
+    from uvicorn.importer import import_from_string
+
+    # Load the exact object named by the manual, with isolated runtime data.
+    application = import_from_string('app.main:app')
+    assert application is main.app
+    assert main.ORIGIN == 'http://127.0.0.1:8765'
+    # The application captures configuration in its lifespan; redirect its
+    # lock boundary to a temporary directory without touching the real one.
+    original_lock = main.data_directory_lock
+    monkeypatch.setattr(main, 'data_directory_lock', lambda _: original_lock(tmp_path))
+    tokens = []
+    monkeypatch.setattr(main, 'print_session_token', lambda token, origin: tokens.append(token))
+    with TestClient(application, base_url=main.ORIGIN) as client:
+        assert client.get('/health').json() == {'status': 'ok', 'version': main.VERSION}
+        assert client.get('/api/status').status_code == 401
+        headers = {'Authorization': 'Bearer ' + tokens[0], 'Origin': main.ORIGIN}
+        assert client.get('/api/status', headers=headers).status_code == 200
+        assert client.get('/health', headers={'Host': '127.0.0.1:8000'}).status_code == 400
 
 
 def test_token_output_uses_only_terminal(monkeypatch, capsys):

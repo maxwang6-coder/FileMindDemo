@@ -1,4 +1,8 @@
-"""Run from a local terminal: python -m app.main [--config ...] [--root-path ...]."""
+"""Local server on 127.0.0.1:8765.
+
+Manual entry: python -m uvicorn app.main:app --host 127.0.0.1 --port 8765
+Project CLI: python -m app.main [--config ...] [--root-path ...]
+"""
 
 from contextlib import asynccontextmanager
 import argparse
@@ -7,7 +11,8 @@ import secrets
 import sys
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from app.auth import LocalSessionMiddleware, print_session_token
@@ -16,10 +21,11 @@ from app.process_lock import data_directory_lock
 
 
 HOST = '127.0.0.1'
-PORT = 8000
+PORT = 8765
 ORIGIN = f'http://{HOST}:{PORT}'
 VERSION = '0.1.0'
 STATIC_DIR = Path(__file__).resolve().parent / 'static'
+FRONTEND_DIST = STATIC_DIR / 'dist'
 
 
 def create_app(configuration: Settings = settings) -> FastAPI:
@@ -49,16 +55,18 @@ def create_app(configuration: Settings = settings) -> FastAPI:
     @app.get('/', response_class=HTMLResponse)
     async def index():
         # Substitute only fixed display labels, never raw configuration values.
-        page = (STATIC_DIR / 'index.html').read_text(encoding='utf-8')
+        entry = FRONTEND_DIST / 'index.html'
+        if not entry.is_file():
+            return HTMLResponse('前端尚未构建，请在项目根目录执行 npm run build。', status_code=503)
+        page = entry.read_text(encoding='utf-8')
         return HTMLResponse(page.replace('{{WRITE_MODE}}',
                             '允许写入' if configuration.WRITE_ENABLED else '只读')
                             .replace('{{MODEL_MODE}}',
                             'Mock（模拟）' if configuration.MODEL_PROVIDER == 'mock'
                             else '真实模型（尚未接入）'))
 
-    @app.get('/static/session.js')
-    async def session_script():
-        return FileResponse(STATIC_DIR / 'session.js', media_type='text/javascript')
+    # Only generated assets are public; Vue source and npm dependencies stay private.
+    app.mount('/static', StaticFiles(directory=FRONTEND_DIST, check_dir=False), name='static')
 
     @app.get('/api/status')
     async def status():
@@ -105,6 +113,11 @@ def main():
                     reload_dirs=[str(STATIC_DIR.parent)], **options)
     else:
         uvicorn.run(create_app(configuration), reload=False, **options)
+
+
+# Uvicorn imports this symbol. Creation only registers routes/middleware;
+# the lock and token are initialized later, during server startup.
+app = create_app()
 
 
 if __name__ == '__main__':
