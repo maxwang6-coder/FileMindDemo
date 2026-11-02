@@ -78,7 +78,7 @@ python -m app.main --config /absolute/path/to/config.local.toml
 - 网页通过 Authorization: Bearer 请求头携带 token；仅保存在页面内存，清空输入框，不写 URL、cookie 或浏览器存储。
 - 中间件覆盖 /api 和 /api/ 下所有方法和路由，包括后续新增路由。
 - 所有 HTTP 请求均检查 Host；Origin 存在且非空时必须精确匹配。拒绝重复的安全头。
-- 未启用 CORS 中间件，不返回开放式跨源许可；禁用代理请求头信任和访问日志。
+- 未启用 CORS 中间件，不返回开放式跨源许可。项目 CLI 禁用代理请求头信任和访问日志；直接调用 Uvicorn 时使用其自身启动选项，不能假定这些选项与 CLI 相同。
 - 页面和 API 同源；禁用缓存，限制脚本来源和页面嵌入；WebSocket 暂不支持。
 - Host 与 Origin 精确匹配 http://127.0.0.1:8765，不使用其他监听地址或端口。
 
