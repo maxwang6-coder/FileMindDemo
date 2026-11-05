@@ -50,6 +50,13 @@ embeddings_cache/
 /real_data/
 /user_data/
 
+# 自生成样例的根外随机哨兵，仅用于本机越界测试
+/demo_docs_boundary/
+
+# Word 打开文档时生成的临时锁文件
+~$*.docx
+.~*.docx
+
 # macOS 与编辑器临时文件
 .DS_Store
 ._*

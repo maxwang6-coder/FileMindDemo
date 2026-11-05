@@ -23,6 +23,14 @@ h2 { font-size: 21px; margin: 0; }
 .session-form .el-button { margin-top: 18px; }
 .feedback { margin-top: 24px; }
 footer { margin-top: 20px; text-align: center; font-size: 13px; }
+.scan-card { margin-top: 24px; border-radius: 16px; }
+.scan-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.scan-actions .el-select { width: 160px; }
+.scan-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; }
+.scan-counts div { background: #f5f7fb; padding: 12px; border-radius: 8px; }
+.scan-counts dt { font-size: 13px; color: #66748a; }
+.scan-counts dd { margin: 6px 0 0; font-size: 23px; }
+.scan-card li, .scan-card .hint { overflow-wrap: anywhere; }
 @media (max-width: 520px) {
   .workspace { padding: 32px 16px; }
   .session-card .el-card__body { padding: 20px; }

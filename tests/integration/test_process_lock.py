@@ -9,6 +9,7 @@ from app.config import Settings
 from app.process_lock import data_directory_lock
 
 
+# 验证同数据目录排斥第二个进程，释放锁后允许再次取得锁。
 def test_second_process_rejected_and_release_allows_restart(tmp_path):
     script = '''
 from pathlib import Path
@@ -20,6 +21,7 @@ try:
 except RuntimeError:
     sys.exit(2)
 '''
+    # 启动另一个 Python 进程竞争同一数据目录锁，收集退出码和输出。
     def contender():
         return subprocess.run([sys.executable, '-c', script, str(tmp_path)],
                               capture_output=True, text=True, timeout=10)
@@ -28,6 +30,7 @@ except RuntimeError:
     assert contender().returncode == 0
 
 
+# 验证持锁进程被强制终止后操作系统释放锁，其他进程可重新使用。
 def test_crashed_process_releases_os_lock(tmp_path):
     script = '''
 from pathlib import Path
@@ -57,6 +60,7 @@ with data_directory_lock(Path(sys.argv[1])):
         process.stdout.close()
 
 
+# 验证不同数据目录可同时持锁，指向同一目录的别名不能绕过锁。
 def test_separate_directories_allowed_and_alias_rejected(tmp_path):
     first = tmp_path / 'first'
     alias = tmp_path / 'alias'
@@ -68,6 +72,7 @@ def test_separate_directories_allowed_and_alias_rejected(tmp_path):
                 pass
 
 
+# 验证服务整个生命周期持有锁，停机后允许再次启动。
 def test_app_holds_lock_until_shutdown(monkeypatch, tmp_path):
     printed = []
     monkeypatch.setattr(main, 'print_session_token', lambda *args: printed.append(args))
@@ -81,7 +86,9 @@ def test_app_holds_lock_until_shutdown(monkeypatch, tmp_path):
         assert len(printed) == 2
 
 
+# 验证启动期间异常也会释放进程锁，不阻止后续启动。
 def test_failed_startup_releases_lock(monkeypatch, tmp_path):
+    # 模拟终端初始化异常，用于检查启动失败后进程锁是否释放。
     def fail(*args):
         raise RuntimeError('terminal unavailable')
     monkeypatch.setattr(main, 'print_session_token', fail)
@@ -92,6 +99,7 @@ def test_failed_startup_releases_lock(monkeypatch, tmp_path):
         pass
 
 
+# 验证未指定 A 阶段或处于 B 阶段时禁止自动重载。
 @pytest.mark.parametrize('argv', [['--reload'], ['--phase', 'B', '--reload']])
 def test_reload_rejected_outside_phase_a(argv):
     with pytest.raises(SystemExit) as error:
@@ -99,6 +107,7 @@ def test_reload_rejected_outside_phase_a(argv):
     assert error.value.code == 2
 
 
+# 验证默认启动关闭重载并仅启用一个服务工作进程。
 def test_default_launch_disables_reload(monkeypatch):
     calls = {}
     monkeypatch.setattr(sys, 'argv', ['app.main'])
@@ -108,12 +117,16 @@ def test_default_launch_disables_reload(monkeypatch):
     assert calls['workers'] == 1
 
 
+# 验证 A 阶段重载使用应用工厂，并保留本机配置和 CLI 根授权。
 def test_phase_a_reload_preserves_cli_config(monkeypatch, tmp_path):
     config = tmp_path / 'local.toml'
     config.write_text('DATA_DIR = "custom-data"\n')
+    root = tmp_path / 'documents'
+    root.mkdir()
     monkeypatch.setattr(sys, 'argv', ['app.main', '--phase', 'A', '--reload',
-                                    '--config', str(config), '--root-path', str(tmp_path)])
+                                    '--config', str(config), '--root-path', str(root)])
     captured = {}
+    # 拦截服务器启动并记录重载选项，避免测试真正启动服务。
     def run(app, **kwargs):
         captured.update(kwargs)
         assert app == 'app.main:create_app_from_cli'
@@ -122,9 +135,10 @@ def test_phase_a_reload_preserves_cli_config(monkeypatch, tmp_path):
     assert captured['reload'] is True and captured['factory'] is True
     app = main.create_app_from_cli()
     assert app.state.settings.DATA_DIR == tmp_path / 'custom-data'
-    assert app.state.settings.ROOT_PATH == tmp_path
+    assert app.state.settings.ROOT_PATH == root
 
 
+# 验证启用文件写入时即使处于 A 阶段也拒绝自动重载。
 def test_reload_rejected_when_write_enabled(tmp_path):
     config = tmp_path / 'local.toml'
     config.write_text('WRITE_ENABLED = true\n')

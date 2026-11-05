@@ -6,11 +6,13 @@ from app import main
 from app.config import Settings
 
 
+# 从首页提取构建脚本地址，组织需要验证的公开资源路径。
 def frontend_paths(client):
     script = re.search(r'<script[^>]+src="([^"]+)"', client.get('/').text).group(1)
     return ('/', '/health', script)
 
 
+# 创建使用临时数据目录和模拟终端输出的 API 测试客户端工厂。
 @pytest.fixture
 def make_client(monkeypatch, tmp_path):
     monkeypatch.setattr(main, 'print_session_token', lambda token, origin: None)
@@ -18,6 +20,7 @@ def make_client(monkeypatch, tmp_path):
         main.create_app(settings or Settings(DATA_DIR=tmp_path / 'data')), base_url=main.ORIGIN)
 
 
+# 验证健康接口只公开状态和版本，并保持 Host、Origin 与缓存限制。
 def test_health_returns_only_status_and_version(make_client, tmp_path):
     with make_client(Settings(ROOT_PATH=tmp_path, DATA_DIR=tmp_path / 'private')) as client:
         response = client.get('/health')
@@ -29,6 +32,7 @@ def test_health_returns_only_status_and_version(make_client, tmp_path):
         assert client.get('/health', headers={'Origin': 'https://evil.example'}).status_code == 403
 
 
+# 验证未登录首页正确显示只读或写入、模拟或真实模型标签。
 @pytest.mark.parametrize('write,provider,labels', [
     (False, 'mock', ('只读', 'Mock（模拟）')),
     (True, 'mock', ('允许写入', 'Mock（模拟）')),
@@ -44,6 +48,7 @@ def test_home_displays_modes_before_login(make_client, tmp_path, write, provider
         assert '{{MODEL_MODE}}' not in response.text
 
 
+# 验证公开页面和脚本不泄露模型密钥、配置值或用户绝对路径。
 def test_public_pages_do_not_expose_secrets_or_paths(make_client, monkeypatch, tmp_path):
     secret = 'secret-marker-not-for-browser'
     monkeypatch.setenv('OPENAI_API_KEY', secret)
@@ -56,6 +61,7 @@ def test_public_pages_do_not_expose_secrets_or_paths(make_client, monkeypatch, t
             assert str(tmp_path) not in response.text
 
 
+# 验证 GET 请求不修改资料或应用数据，也不启动外部程序打开文件。
 def test_get_requests_cannot_mutate_or_open_files(make_client, monkeypatch, tmp_path):
     tokens = []
     monkeypatch.setattr(main, 'print_session_token', lambda token, origin: tokens.append(token))
@@ -64,7 +70,7 @@ def test_get_requests_cannot_mutate_or_open_files(make_client, monkeypatch, tmp_
     document = root / 'example.txt'
     document.write_text('unchanged')
 
-    # Opening files in an external application must never happen during GET.
+    # 若 GET 流程启动外部进程则立即让测试失败。
     def forbid_external_open(*args, **kwargs):
         raise AssertionError('GET launched an external process')
 

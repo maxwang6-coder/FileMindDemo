@@ -1,0 +1,102 @@
+{
+  "root_id": "demo",
+  "files": {
+    "D01": {
+      "file_id": "f4f5d8bf-2801-441a-8796-a81804cd8557",
+      "relpath": "notes_01.txt"
+    },
+    "D02": {
+      "file_id": "9dadc30d-d07f-4520-b4bd-280019d68dc6",
+      "relpath": "handout.pdf"
+    },
+    "D03": {
+      "file_id": "565eb74a-f89f-4ff2-b114-ef138b5c9945",
+      "relpath": "receipt.txt"
+    },
+    "D04": {
+      "file_id": "10bb890f-1426-42f4-b579-597bf6a35c2f",
+      "relpath": "manual.docx"
+    },
+    "D05": {
+      "file_id": "4434e813-bc93-486e-9be8-45c89cfcc75b",
+      "relpath": "interview.md"
+    },
+    "D06": {
+      "file_id": "2f157461-aa2d-45ec-88ca-303dce46059a",
+      "relpath": "notes_copy.txt"
+    },
+    "D07": {
+      "file_id": "7f710a51-de8b-4393-ba90-b533dd0380aa",
+      "relpath": "instruction.txt"
+    },
+    "D08": {
+      "file_id": "ad248d3d-0c8c-4450-abc3-7f0483fd5027",
+      "relpath": "empty.pdf"
+    },
+    "D09": {
+      "file_id": "80d95658-2711-486c-b7e6-5bb70423ab18",
+      "relpath": "broken.pdf"
+    },
+    "E01": {
+      "file_id": "f532e13c-b6d9-4f98-821c-53942625ff52",
+      "relpath": "中文 文件(测试).txt"
+    },
+    "E02": {
+      "file_id": "15c3721b-1cd4-4b95-9158-71b471c2fd96",
+      "relpath": "组合-café.txt"
+    },
+    "E03": {
+      "file_id": "d04a7ce2-04c2-4baf-a0a2-85f6c74b4c3c",
+      "relpath": "标准-café.txt"
+    },
+    "E04": {
+      "file_id": "37019e58-59cb-4419-85e1-d7e8d5c7f039",
+      "relpath": "long_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.txt"
+    }
+  },
+  "boundary": {
+    "link": "outside_link.txt",
+    "target": "../demo_docs_boundary/sentinel.txt"
+  },
+  "case_conflict_candidates": [
+    "Case.txt",
+    "case.txt"
+  ],
+  "queries": [
+    {
+      "query_id": "Q01",
+      "query": "特征值",
+      "relevant_file_aliases": [
+        "D01",
+        "D02",
+        "D06"
+      ]
+    },
+    {
+      "query_id": "Q02",
+      "query": "退货期限",
+      "relevant_file_aliases": [
+        "D03"
+      ]
+    },
+    {
+      "query_id": "Q03",
+      "query": "USB 录音连接",
+      "relevant_file_aliases": [
+        "D04"
+      ]
+    },
+    {
+      "query_id": "Q04",
+      "query": "这台设备保修几年",
+      "relevant_file_aliases": []
+    },
+    {
+      "query_id": "Q05",
+      "query": "AI实习准备",
+      "relevant_file_aliases": [
+        "D05"
+      ]
+    }
+  ]
+}

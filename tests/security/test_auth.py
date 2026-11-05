@@ -7,6 +7,7 @@ from app import auth
 from app.config import Settings
 
 
+# 建立临时服务并捕获测试会话凭证，为鉴权或扫描接口测试准备客户端。
 @pytest.fixture
 def session(monkeypatch, tmp_path):
     printed = []
@@ -15,6 +16,7 @@ def session(monkeypatch, tmp_path):
         yield client, printed[0]
 
 
+# 验证所有 API 路径和方法要求有效 Bearer，不接受错误或 URL 凭证。
 def test_api_requires_bearer_on_all_routes_and_methods(session):
     client, token = session
     for path in ('/api', '/api/status', '/api/missing', '/api/status/'):
@@ -25,6 +27,7 @@ def test_api_requires_bearer_on_all_routes_and_methods(session):
     assert client.get('/api/status', headers={'Authorization': 'Bearer ' + token}).status_code == 200
 
 
+# 验证即使 token 正确，非允许来源的请求仍被拒绝且无开放 CORS。
 @pytest.mark.parametrize('origin', ['https://evil.example', 'null', 'http://127.0.0.1:8000', 'https://127.0.0.1:8765'])
 def test_foreign_origin_rejected_even_with_token(session, origin):
     client, token = session
@@ -33,12 +36,14 @@ def test_foreign_origin_rejected_even_with_token(session, origin):
     assert 'access-control-allow-origin' not in response.headers
 
 
+# 验证伪造主机、错误端口和非白名单主机名被拒绝。
 @pytest.mark.parametrize('host', ['evil.example:8765', '127.0.0.1.evil.example:8765', 'localhost:8765', '127.0.0.1:8000'])
 def test_invalid_host_rejected(session, host):
     client, token = session
     assert client.get('/api/status', headers={'Host': host, 'Authorization': 'Bearer ' + token}).status_code == 400
 
 
+# 验证合法、缺少或空 Origin 可通过同源检查，仍须正确鉴权。
 @pytest.mark.parametrize('origin', [None, '', main.ORIGIN])
 def test_expected_origin_and_missing_origin_allowed(session, origin):
     client, token = session
@@ -48,6 +53,7 @@ def test_expected_origin_and_missing_origin_allowed(session, origin):
     assert client.get('/api/status', headers=headers).status_code == 200
 
 
+# 验证重复 Host、Origin 或 Authorization 安全头按规则拒绝。
 def test_duplicate_security_headers_rejected(session):
     client, token = session
     for name, value, expected in [('Host', f'{main.HOST}:{main.PORT}', 400), ('Origin', main.ORIGIN, 403), ('Authorization', 'Bearer ' + token, 401)]:
@@ -55,6 +61,7 @@ def test_duplicate_security_headers_rejected(session):
         assert response.status_code == expected
 
 
+# 验证公开构建资源不含会话凭证、禁止缓存且不暴露前端源码。
 def test_public_assets_contain_no_token_and_are_not_cached(session):
     client, token = session
     script_path = re.search(r'<script[^>]+src="([^"]+)"', client.get('/').text).group(1)
@@ -70,6 +77,7 @@ def test_public_assets_contain_no_token_and_are_not_cached(session):
     assert client.get('/static/src/App.vue').status_code == 404
 
 
+# 验证每次启动生成新会话凭证，旧凭证在重启后失效。
 def test_restart_rotates_token(monkeypatch, tmp_path):
     tokens = []
     monkeypatch.setattr(main, 'print_session_token', lambda token, origin: tokens.append(token))
@@ -81,6 +89,7 @@ def test_restart_rotates_token(monkeypatch, tmp_path):
         assert client.get('/api/status', headers={'Authorization': 'Bearer ' + tokens[0]}).status_code == 401
 
 
+# 验证项目启动器只监听回环地址和固定端口，并禁用代理头信任及访问日志。
 def test_launcher_binds_only_loopback(monkeypatch):
     captured = {}
     monkeypatch.setattr(main.sys, 'argv', ['app.main'])
@@ -92,17 +101,21 @@ def test_launcher_binds_only_loopback(monkeypatch):
     assert captured['access_log'] is False
 
 
+# 验证手册的 Uvicorn 导入入口、健康接口与鉴权，在隔离运行数据后保持正确。
 def test_manual_uvicorn_entry(monkeypatch, tmp_path):
     from uvicorn.importer import import_from_string
 
-    # Load the exact object named by the manual, with isolated runtime data.
+    # 导入手册指定的真实入口对象，随后把运行时数据边界隔离到临时目录。
     application = import_from_string('app.main:app')
     assert application is main.app
     assert main.ORIGIN == 'http://127.0.0.1:8765'
-    # The application captures configuration in its lifespan; redirect its
-    # lock boundary to a temporary directory without touching the real one.
+    # 入口对象已捕获默认配置，因此单独把进程锁与数据库检查重定向到临时目录。
     original_lock = main.data_directory_lock
     monkeypatch.setattr(main, 'data_directory_lock', lambda _: original_lock(tmp_path))
+    original_check = main.check_existing_database
+    monkeypatch.setattr(main, 'check_existing_database', lambda _: original_check(tmp_path))
+    # 阻止测试入口针对真实应用数据库启动任务管理器，避免改动实际数据。
+    monkeypatch.setattr(main, 'DB_NAME', 'absent-entry-test-database.sqlite3')
     tokens = []
     monkeypatch.setattr(main, 'print_session_token', lambda token, origin: tokens.append(token))
     with TestClient(application, base_url=main.ORIGIN) as client:
@@ -113,16 +126,19 @@ def test_manual_uvicorn_entry(monkeypatch, tmp_path):
         assert client.get('/health', headers={'Host': '127.0.0.1:8000'}).status_code == 400
 
 
+# 验证会话凭证只输出到本机终端，不进入标准输出或标准错误。
 def test_token_output_uses_only_terminal(monkeypatch, capsys):
     from io import StringIO
 
     class Terminal(StringIO):
+        # 保留内存终端内容，便于终端输出测试在调用关闭后继续断言。
         def close(self):
             pass
 
     terminal = Terminal()
     opened = []
 
+    # 记录终端打开请求并返回内存终端替身，避免向真实终端输出凭证。
     def open_terminal(path, mode, **kwargs):
         opened.append((path, mode))
         return terminal
@@ -135,7 +151,9 @@ def test_token_output_uses_only_terminal(monkeypatch, capsys):
     assert not output.out and not output.err
 
 
+# 验证无法取得本机交互终端时拒绝启动，避免无安全凭证入口。
 def test_missing_terminal_stops_startup(monkeypatch, tmp_path):
+    # 模拟来源或终端不可用异常，验证相应失败路径的处理。
     def unavailable(*args, **kwargs):
         raise OSError('no controlling terminal')
 

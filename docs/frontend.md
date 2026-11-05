@@ -6,7 +6,7 @@ Element UI 主要用于 Vue 2，因此本项目安装 Vue 3 对应的 Element Pl
 ## 文件位置
 
 - `app/static/index.html`：Vue 入口页面，保留后端填写的模式标签。
-- `app/static/src/App.vue`：页面组件、token 输入与连接逻辑。
+- `app/static/src/App.vue`：页面组件、token 连接、授权根选择及扫描报告。
 - `app/static/src/main.js`：加载 Vue、组件样式并挂载页面。
 - `app/static/src/style.css`：页面布局和颜色。
 - `package.json` / `package-lock.json`：前端依赖和锁定版本。
@@ -51,8 +51,8 @@ sh scripts/frontend.sh run build:watch
 
 - token 仅在组件内存中保存；通过 Authorization: Bearer 传递。
 - 不写入 URL、cookie、localStorage、sessionStorage 或 console。
-- 断开、页面离开和组件卸载时清除会话，取消尚未完成的认证请求。
-- 前端只接收模式标签，不接收模型密钥或授权目录。
+- 断开、页面离开和组件卸载时清除会话和报告，取消页面请求及任务轮询；不强行取消已受理后台扫描。
+- 前端接收模式标签、当前授权根的 ID/别名与鉴权后的扫描报告，不接收模型密钥或根的绝对路径，没有任意路径授权输入。
 - 浏览器使用本地打包的脚本与样式，不依赖外部 CDN。
 - 为 Element Plus 运行时布局允许内联样式；脚本策略仍只有 self，不允许内联脚本或 unsafe-eval。
 
@@ -62,3 +62,5 @@ sh scripts/frontend.sh run build:watch
 sh scripts/frontend.sh run build
 .venv/bin/python -m pytest -q
 ```
+
+扫描页面的运行、任务协议与验收统一见 [A1 第五步](<A1 Steps.md#step-5>)。

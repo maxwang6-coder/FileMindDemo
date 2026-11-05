@@ -1,5 +1,5 @@
 #!/bin/sh
-# npm wrapper supporting either system Node.js or this project's local tools.
+# npm 启动包装：优先使用系统 Node.js，缺少时使用项目本机工具。
 set -eu
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$project_dir"
